@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airbnb Price Prediction | Smart Pricing Tool</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.6s ease-out',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #6366f1;
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4f46e5;
+        }
+        
+        /* Glassmorphism effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .dark .glass {
+            background: rgba(31, 41, 55, 0.9);
+        }
+        
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+    
+    <script>
+        // Dark mode initialization
+        if (localStorage.getItem('theme') === 'dark' || 
+            (!localStorage.getItem('theme') && globalThis.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+        
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const isDark = html.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            
+            // Update icon
+            const icon = document.getElementById('theme-icon');
+            icon.textContent = isDark ? '☀️' : '🌙';
+        }
+        
+        // Form validation and interactivity
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('prediction-form');
+            
+            // Add smooth scroll to result
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    setTimeout(() => {
+                        const result = document.getElementById('result');
+                        if (result) {
+                            result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }, 100);
+                });
+            }
+            
+            // Add input animations
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.parentElement.classList.add('ring-2', 'ring-indigo-500');
+                });
+                input.addEventListener('blur', function() {
+                    this.parentElement.classList.remove('ring-2', 'ring-indigo-500');
+                });
+            });
+        });
+        
+        // Progress indicator
+        function updateProgress() {
+            const inputs = document.querySelectorAll('input[required], select[required]');
+            const filled = Array.from(inputs).filter(input => input.value !== '').length;
+            const percentage = (filled / inputs.length) * 100;
+            
+            const progressBar = document.getElementById('progress-bar');
+            if (progressBar) {
+                progressBar.style.width = percentage + '%';
+            }
+        }
+    </script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-slate-900 dark:to-indigo-950 transition-colors duration-500">
+    
+    <!-- Navigation Bar -->
+    <nav class="sticky top-0 z-50 glass border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <span class="text-white text-xl font-bold">🏠</span>
+                    </div>
+                    <h1 class="text-xl font-bold gradient-text">Airbnb Pricing</h1>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <button onclick="toggleDarkMode()" 
+                            class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm">
+                        <span id="theme-icon" class="text-xl">🌙</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div class="h-1 bg-gray-200 dark:bg-gray-700">
+            <div id="progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-300" style="width: 0%"></div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Hero Section -->
+        <div class="text-center mb-12 animate-fade-in">
+            <h2 class="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-4">
+                Get Your <span class="gradient-text">Perfect Price</span>
+            </h2>
+            <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Use our advanced AI-powered tool to predict the optimal price for your Airbnb listing
+            </p>
+        </div>
+
+        <!-- Form Card -->
+        <div class="glass rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden animate-slide-up">
+            <form id="prediction-form" action="{{url_for('home')}}" method="POST" onchange="updateProgress()">
+                
+                <!-- Property Information -->
+                <div class="p-6 md:p-8 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900 rounded-lg flex items-center justify-center">
+                            <span class="text-2xl">🏢</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Property Information</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Property Type -->
+                        <div class="space-y-2">
+                            <label for="property_type" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Property Type
+                            </label>
+                            <select name="property_type" id="property_type" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                                <option value="">Select type...</option>
+                                <option value="Apartment">Apartment</option>
+                                <option value="House">House</option>
+                                <option value="Bed & Breakfast">Bed & Breakfast</option>
+                                <option value="Boutique hotel">Boutique Hotel</option>
+                                <option value="Bungalow">Bungalow</option>
+                                <option value="Condominium">Condominium</option>
+                                <option value="Loft">Loft</option>
+                                <option value="Boat">Boat</option>
+                            </select>
+                        </div>
+
+                        <!-- Room Type -->
+                        <div class="space-y-2">
+                            <label for="room_type" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Room Type
+                            </label>
+                            <select name="room_type" id="room_type" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                                <option value="">Select room type...</option>
+                                <option value="Entire Home/Apt">Entire Home/Apt</option>
+                                <option value="Private Room">Private Room</option>
+                                <option value="Shared Room">Shared Room</option>
+                            </select>
+                        </div>
+
+                        <!-- Bed Type -->
+                        <div class="space-y-2">
+                            <label for="bed_type" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Bed Type
+                            </label>
+                            <select name="bed_type" id="bed_type" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                                <option value="">Select bed type...</option>
+                                <option value="Real Bed">Real Bed</option>
+                                <option value="Futon">Futon</option>
+                                <option value="Pull-out Sofa">Pull-out Sofa</option>
+                                <option value="Airbed">Airbed</option>
+                                <option value="Couch">Couch</option>
+                            </select>
+                        </div>
+
+                        <!-- Bedrooms -->
+                        <div class="space-y-2">
+                            <label for="bedrooms" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Bedrooms
+                            </label>
+                            <input type="number" name="bedrooms" id="bedrooms" value="1" min="0" max="10" required
+                                   class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                        </div>
+
+                        <!-- Beds -->
+                        <div class="space-y-2">
+                            <label for="beds" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Beds
+                            </label>
+                            <input type="number" name="beds" id="beds" value="1" min="0" max="18" required
+                                   class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                        </div>
+
+                        <!-- Bathrooms -->
+                        <div class="space-y-2">
+                            <label for="bathrooms" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Bathrooms
+                            </label>
+                            <input type="number" name="bathrooms" id="bathrooms" value="1" min="0" max="8" step="0.5" required
+                                   class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                        </div>
+
+                        <!-- Accommodates -->
+                        <div class="space-y-2">
+                            <label for="accommodates" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Max Guests
+                            </label>
+                            <input type="number" name="accommodates" id="accommodates" value="2" min="1" max="16" required
+                                   class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                        </div>
+
+                        <!-- Amenities -->
+                        <div class="space-y-2">
+                            <label for="amenities" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Total Amenities
+                            </label>
+                            <input type="number" name="amenities" id="amenities" value="5" min="2" max="1496" required
+                                   class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Location -->
+                <div class="p-6 md:p-8 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                            <span class="text-2xl">📍</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Location</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- City -->
+                        <div class="space-y-2">
+                            <label for="city" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                City
+                            </label>
+                            <select name="city" id="city" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                                <option value="">Select city...</option>
+                                <option value="New York">New York</option>
+                                <option value="Los Angeles">Los Angeles</option>
+                                <option value="San Francisco">San Francisco</option>
+                                <option value="Chicago">Chicago</option>
+                                <option value="Boston">Boston</option>
+                                <option value="Washington, D.C.">Washington, D.C.</option>
+                            </select>
+                        </div>
+
+                        <!-- Latitude -->
+                        <div class="space-y-2">
+                            <label for="latitude" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Latitude
+                            </label>
+                            <input type="number" name="latitude" id="latitude" value="40.7128" step="0.000001" required
+                                   class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                        </div>
+
+                        <!-- Longitude -->
+                        <div class="space-y-2">
+                            <label for="longitude" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Longitude
+                            </label>
+                            <input type="number" name="longitude" id="longitude" value="-74.0060" step="0.000001" required
+                                   class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Policies -->
+                <div class="p-6 md:p-8 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                            <span class="text-2xl">📋</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Policies & Features</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Cancellation Policy -->
+                        <div class="space-y-2">
+                            <label for="cancellation_policy" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Cancellation Policy
+                            </label>
+                            <select name="cancellation_policy" id="cancellation_policy" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                                <option value="">Select policy...</option>
+                                <option value="Flexible">Flexible</option>
+                                <option value="Moderate">Moderate</option>
+                                <option value="Strict">Strict</option>
+                                <option value="Super strict">Super Strict</option>
+                                <option value="Advanced Super Strict">Advanced Super Strict</option>
+                            </select>
+                        </div>
+
+                        <!-- Cleaning Fee -->
+                        <div class="space-y-2">
+                            <label for="cleaning_fee" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Cleaning Fee
+                            </label>
+                            <select name="cleaning_fee" id="cleaning_fee" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                                <option value="1">Yes</option>
+                                <option value="0">No</option>
+                            </select>
+                        </div>
+
+                        <!-- Instant Bookable -->
+                        <div class="space-y-2">
+                            <label for="instant_bookable" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Instant Booking
+                            </label>
+                            <select name="instant_bookable" id="instant_bookable" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                                <option value="1">Enabled</option>
+                                <option value="0">Disabled</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Host Information -->
+                <div class="p-6 md:p-8 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="w-10 h-10 bg-yellow-100 dark:bg-yellow-900 rounded-lg flex items-center justify-center">
+                            <span class="text-2xl">👤</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Host Profile</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Host Profile Pic -->
+                        <div class="space-y-2">
+                            <label for="host_has_profile_pic" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Profile Picture
+                            </label>
+                            <select name="host_has_profile_pic" id="host_has_profile_pic" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                                <option value="1">Yes</option>
+                                <option value="0">No</option>
+                            </select>
+                        </div>
+
+                        <!-- Host Verified -->
+                        <div class="space-y-2">
+                            <label for="host_identity_verified" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Identity Verified
+                            </label>
+                            <select name="host_identity_verified" id="host_identity_verified" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                                <option value="1">Verified</option>
+                                <option value="0">Not Verified</option>
+                            </select>
+                        </div>
+
+                        <!-- Host Response Rate -->
+                        <div class="space-y-2">
+                            <label for="host_response_rate" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Response Rate (%)
+                            </label>
+                            <input type="number" name="host_response_rate" id="host_response_rate" value="100" min="0" max="100" required
+                                   class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reviews & Ratings -->
+                <div class="p-6 md:p-8 bg-gradient-to-r from-rose-50 to-red-50 dark:from-rose-900/20 dark:to-red-900/20">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="w-10 h-10 bg-rose-100 dark:bg-rose-900 rounded-lg flex items-center justify-center">
+                            <span class="text-2xl">⭐</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Reviews & Ratings</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Number of Reviews -->
+                        <div class="space-y-2">
+                            <label for="number_of_reviews" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Total Reviews
+                            </label>
+                            <input type="number" name="number_of_reviews" id="number_of_reviews" value="0" min="0" max="1000" required
+                                   class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                        </div>
+
+                        <!-- Review Rating -->
+                        <div class="space-y-2">
+                            <label for="review_scores_rating" class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Average Rating (0-100)
+                            </label>
+                            <input type="number" name="review_scores_rating" id="review_scores_rating" value="95" min="0" max="100" required
+                                   class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-transparent text-gray-900 dark:text-gray-100 transition-all shadow-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="p-6 md:p-8 bg-gray-50 dark:bg-gray-800/50">
+                    <button type="submit" 
+                            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-lg font-bold py-4 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center space-x-2">
+                        <span>Calculate Optimal Price</span>
+                        <span>💰</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Result Display -->
+        {% if result %}
+        <div id="result" class="mt-8 glass rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden animate-slide-up">
+            <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-8 text-center">
+                <div class="inline-block bg-white/20 backdrop-blur-sm rounded-full px-6 py-2 mb-4">
+                    <span class="text-white/90 text-sm font-semibold uppercase tracking-wider">Predicted Price</span>
+                </div>
+                <div class="text-6xl md:text-7xl font-extrabold text-white mb-2 animate-pulse-slow">
+                    {{result}}
+                </div>
+                <p class="text-white/80 text-lg">per night</p>
+            </div>
+            
+            <div class="p-8 bg-white dark:bg-gray-800">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl">
+                        <div class="text-3xl mb-2">📊</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Competitive</div>
+                        <div class="text-lg font-bold text-gray-900 dark:text-white">Market Rate</div>
+                    </div>
+                    
+                    <div class="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl">
+                        <div class="text-3xl mb-2">✨</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">AI-Powered</div>
+                        <div class="text-lg font-bold text-gray-900 dark:text-white">Prediction</div>
+                    </div>
+                    
+                    <div class="text-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl">
+                        <div class="text-3xl mb-2">🎯</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Optimised For</div>
+                        <div class="text-lg font-bold text-gray-900 dark:text-white">Maximum ROI</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Info Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            <div class="glass rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
+                <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center mb-4">
+                    <span class="text-2xl">🤖</span>
+                </div>
+                <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-2">AI-Powered Analysis</h4>
+                <p class="text-gray-600 dark:text-gray-400 text-sm">Advanced machine learning algorithms analyze thousands of data points</p>
+            </div>
+            
+            <div class="glass rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
+                <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center mb-4">
+                    <span class="text-2xl">⚡</span>
+                </div>
+                <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Instant Results</h4>
+                <p class="text-gray-600 dark:text-gray-400 text-sm">Get accurate pricing predictions in seconds, not hours</p>
+            </div>
+            
+            <div class="glass rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
+                <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center mb-4">
+                    <span class="text-2xl">📈</span>
+                </div>
+                <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Maximise Revenue</h4>
+                <p class="text-gray-600 dark:text-gray-400 text-sm">Optimise your listing price for maximum occupancy and profit</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-16 py-8 border-t border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-gray-600 dark:text-gray-400 text-sm">
+                © 2025 Airbnb Price Prediction Tool. Powered by Advanced Machine Learning.
+            </p>
+        </div>
+    </footer>
+
+</body>
+</html>
