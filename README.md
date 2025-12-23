@@ -672,13 +672,12 @@ pip install -e .
 ## 📧 Contact
 
 **Sergio Sediq**
-- 📧 **Email:** [tunsed11@gmail.com](mailto:tunsed11@gmail.com)
-- 🔗 **LinkedIn:** [linkedin.com/in/sedyagho](https://www.linkedin.com/in/sedyagho)
-- 💻 **GitHub:** [github.com/SergioSediq](https://github.com/SergioSediq)
 
----
+📧 [tunsed11@gmail.com](mailto:tunsed11@gmail.com)
 
-**Project Repository:** [END-TO-END-AIRBNB-PRICE-PREDICTION](https://github.com/SergioSediq/END-TO-END-AIRBNB-PRICE-PREDICTION)
+🔗 [LinkedIn](https://www.linkedin.com/in/sedyagho) | [GitHub](https://github.com/SergioSediq)
+
+**Project Link:** [https://github.com/SergioSediq/END-TO-END-AIRBNB-PRICE-PREDICTION](https://github.com/SergioSediq/END-TO-END-AIRBNB-PRICE-PREDICTION)
 
 ---
 
