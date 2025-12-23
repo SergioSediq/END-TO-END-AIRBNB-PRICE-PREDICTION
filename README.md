@@ -677,8 +677,6 @@ pip install -e .
 
 🔗 [LinkedIn](https://www.linkedin.com/in/sedyagho) | [GitHub](https://github.com/SergioSediq)
 
-**Project Link:** [https://github.com/SergioSediq/END-TO-END-AIRBNB-PRICE-PREDICTION](https://github.com/SergioSediq/END-TO-END-AIRBNB-PRICE-PREDICTION)
-
 ---
 
 ## 📄 License
